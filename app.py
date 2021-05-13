@@ -62,6 +62,7 @@ async def trader(request):
     params = order['id'].split(':')
     ticker_id = request['symbol']
     symbol = params[0]
+    wallet_symbol = params[2]
     default_type =  params[1].lower()
     if exchange not in bot:
         try:
@@ -107,7 +108,7 @@ async def trader(request):
 
     if default_type in ['', 'spot']:
         position = balance[base]['total']
-    balance = balance[quote]['total']
+    balance = balance[wallet_symbol]['total']
 
     # マーケット情報の取得
     market = bot[exchange].client.markets[symbol]
@@ -121,11 +122,15 @@ async def trader(request):
     # 発注処理    
     position_disparity = position - order['market_position_size']
 
-    if abs(position_disparity) < min_amount:
-        # 最小数量を下回っている際は例外発生
+    try:
+        if abs(position_disparity) < min_amount:
+            # 最小数量を下回っている際は例外発生
+            raise ValueError('Error: Order amount is Please specify min amount or more for the amount.')
+    except Exception as e:
         output_exception_message(request)
-        raise 'Error: Order amount is Please specify min amount or more for the amount.'
-    
+        logger.exception(str(e))
+        return
+
     client_order = {
         'symbol': symbol,
         'ord_type': 'market',
